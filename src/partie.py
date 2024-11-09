@@ -1,85 +1,93 @@
-import pygame
 import chess
-import chess.svg
+import pygame
+from MCTS import mcts_search
+from TransformTensor import board_to_tensor
+from DeepNN import DeepNN
 
-# Initialiser Pygame et le plateau d'échecs
-pygame.init()
-screen = pygame.display.set_mode((640, 640))
-pygame.display.set_caption("Jeu d'Échecs - python-chess + Pygame")
+class Partie:
+    def __init__(self, model, display=False):
+        """
+        Initialise une nouvelle partie d'échecs.
+        :param model: Le modèle de réseau neuronal (DeepNN) utilisé pour les décisions de jeu.
+        :param display: Activer ou désactiver l'affichage de la partie (optionnel, utile pour visualiser les jeux).
+        """
+        self.board = chess.Board()  # Créer un plateau d'échecs vide
+        self.model = model
+        self.display = display
+        if display:
+            pygame.init()
+            self.screen = pygame.display.set_mode((640, 640))
+            pygame.display.set_caption("Partie d'Échecs - IA vs IA")
+            self.square_size = 80
 
-square_width = 80
-square_height = 80
-# Charger les images des pièces
-piece_names = ["pion_noir", "tour_noir", "cheval_noir", "fou_noir", "reine_noir", "roi_noir", 
-                "pion_blanc", "tour_blanc", "cheval_blanc", "fou_blanc", "reine_blanc", "roi_blanc"]
-piece_images = {
-    "P": pygame.transform.scale(pygame.image.load("../images/pion_blanc.png").convert_alpha(), (square_width, square_height)),
-    "R": pygame.transform.scale(pygame.image.load("../images/tour_blanc.png").convert_alpha(), (square_width, square_height)),
-    "N": pygame.transform.scale(pygame.image.load("../images/cheval_blanc.png").convert_alpha(), (square_width, square_height)),
-    "B": pygame.transform.scale(pygame.image.load("../images/fou_blanc.png").convert_alpha(), (square_width, square_height)),
-    "Q": pygame.transform.scale(pygame.image.load("../images/reine_blanc.png").convert_alpha(), (square_width, square_height)),
-    "K": pygame.transform.scale(pygame.image.load("../images/roi_blanc.png").convert_alpha(), (square_width, square_height)),
-    "p": pygame.transform.scale(pygame.image.load("../images/pion_noir.png").convert_alpha(), (square_width, square_height)),
-    "r": pygame.transform.scale(pygame.image.load("../images/tour_noir.png").convert_alpha(), (square_width, square_height)),
-    "n": pygame.transform.scale(pygame.image.load("../images/cheval_noir.png").convert_alpha(), (square_width, square_height)),
-    "b": pygame.transform.scale(pygame.image.load("../images/fou_noir.png").convert_alpha(), (square_width, square_height)),
-    "q": pygame.transform.scale(pygame.image.load("../images/reine_noir.png").convert_alpha(), (square_width, square_height)),
-    "k": pygame.transform.scale(pygame.image.load("../images/roi_noir.png").convert_alpha(), (square_width, square_height)),
-}
+    def draw_board(self):
+        """Affiche le plateau et les pièces dans Pygame."""
+        colors = [pygame.Color(235, 235, 208), pygame.Color(119, 149, 86)]
+        for row in range(8):
+            for col in range(8):
+                color = colors[(row + col) % 2]
+                pygame.draw.rect(self.screen, color, pygame.Rect(col * self.square_size, row * self.square_size, self.square_size, self.square_size))
+        
+        # Placer les images des pièces
+        for square in chess.SQUARES:
+            piece = self.board.piece_at(square)
+            if piece:
+                x = (square % 8) * self.square_size
+                y = (7 - (square // 8)) * self.square_size
+                piece_image = self.get_piece_image(piece.symbol())  # Fonction pour charger les images des pièces
+                self.screen.blit(piece_image, (x, y))
+        pygame.display.flip()
 
-for piece in piece_names:
-    piece_images[piece] = pygame.image.load(f"../images/{piece}.png").convert_alpha()
+    def get_piece_image(self, piece_symbol):
+        """Charge l'image de la pièce correspondant au symbole (P = pion blanc, r = tour noir, etc.)."""
+        piece_images = {
+            "P": "../images/pion_blanc.png",
+            "R": "../images/tour_blanc.png",
+            "N": "../images/cheval_blanc.png",
+            "B": "../images/fou_blanc.png",
+            "Q": "../images/reine_blanc.png",
+            "K": "../images/roi_blanc.png",
+            "p": "../images/pion_noir.png",
+            "r": "../images/tour_noir.png",
+            "n": "../images/cheval_noir.png",
+            "b": "../images/fou_noir.png",
+            "q": "../images/reine_noir.png",
+            "k": "../images/roi_noir.png"
+        }
+        image_path = piece_images[piece_symbol]
+        return pygame.transform.scale(pygame.image.load(image_path).convert_alpha(), (self.square_size, self.square_size))
 
+    def jouer_coup(self):
+        """Exécute un coup via MCTS et met à jour le plateau."""
+        if self.board.is_game_over():
+            return None
 
-# Créer le plateau
-board = chess.Board()
+        move, _, _ = mcts_search(self.board, self.model)  # Obtenir le meilleur coup avec MCTS
+        self.board.push(move)  # Appliquer le coup
 
-# Fonction pour dessiner le plateau
-def draw_board():
-    colors = [pygame.Color(235, 235, 208), pygame.Color(119, 149, 86)]
-    for row in range(8):
-        for col in range(8):
-            color = colors[(row + col) % 2]
-            pygame.draw.rect(screen, color, pygame.Rect(col * 80, row * 80, 80, 80))
+        if self.display:
+            self.draw_board()  # Mettre à jour l'affichage
 
-    for square in chess.SQUARES:
-        piece = board.piece_at(square)
-        if piece:
-            x = (square % 8) * 80
-            y = (7 - (square // 8)) * 80
-            screen.blit(piece_images[piece.symbol()], (x, y))
+        return move
 
-selected_square = None
+    def jouer_partie(self):
+        """Lance la partie complète jusqu'à la fin."""
+        if self.display:
+            self.draw_board()
+        
+        while not self.board.is_game_over():
+            self.jouer_coup()
+        
+        # Fin de la partie
+        print("Résultat de la partie :", self.board.result())
+        if self.display:
+            pygame.quit()
 
-# Boucle de jeu
-running = True
-while running:
-    draw_board()
-    pygame.display.flip()
-
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            x, y = pygame.mouse.get_pos()
-            col, row = x // 80, 7 - (y // 80)
-            square = chess.square(col, row)
-
-            if selected_square is None:
-                # Sélectionner la pièce à déplacer
-                if board.piece_at(square):
-                    selected_square = square
-            else:
-                # Essayer de déplacer la pièce
-                move = chess.Move(selected_square, square)
-                if move in board.legal_moves:
-                    board.push(move)
-                selected_square = None
-
-    # Vérifier si la partie est terminée
-    if board.is_game_over():
-        print("Fin de la partie :", board.result())
-        running = False
-
-pygame.quit()
+    def get_result(self):
+        """Renvoie le résultat de la partie : 1 si les Blancs gagnent, -1 si les Noirs gagnent, 0 si égalité."""
+        if self.board.result() == "1-0":
+            return 1
+        elif self.board.result() == "0-1":
+            return -1
+        else:
+            return 0
