@@ -3,7 +3,7 @@ import numpy as np
 
 #convert chess position to tensor
 def board_to_tensor(board):
-    tensor = np.zeros((8, 8, 12), dtype=np.float32) #8x8 board with 12 planes for each piece type
+    tensor = np.zeros((8, 8, 101), dtype=np.float32) 
     piece_map = {
         chess.PAWN: 0, chess.KNIGHT: 1, chess.BISHOP: 2, chess.ROOK: 3,
         chess.QUEEN: 4, chess.KING: 5

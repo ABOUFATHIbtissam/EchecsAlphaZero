@@ -11,7 +11,15 @@ class Main:
         self.model = DeepNN()  # Initialiser le modèle de l'IA
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)  # Optimiseur pour entraîner le modèle
         self.trainer = Train(self.model)
-        self.self_play_data = []  # Liste pour stocker les données d'auto-apprentissage
+        self.self_play_data = [] #pour stocker les données de self-play
+
+        # self.self_play_data = self.trainer.self_play_data  #utilisation de la mémoire de self-play du trainer
+        #on peut reprendre l'entraînement à partir d'un modèle existant
+        # try:
+        #     self.trainer.load_model("best_model.pth")
+        #     print("Modèle existant chargé avec succès.")
+        # except FileNotFoundError:
+        #     print("Aucun modèle existant trouvé.")
 
     def jouer_une_partie(self):
         """Fait jouer une partie complète entre l'IA contre elle-même."""
@@ -25,7 +33,7 @@ class Main:
             print(f"Début de la partie {i + 1}")
             self.trainer.play_game(self.model)  # Jouer une partie en auto-apprentissage
             if len(self.self_play_data) > 500:  # Si on a suffisamment de données
-                self.trainer.train(self.model, self.self_play_data, self.optimizer)  # Entraîner le modèle avec les données
+                self.trainer.train() 
 
     def main_loop(self):
         """Boucle principale pour faire jouer l'IA et afficher les résultats."""
@@ -34,7 +42,7 @@ class Main:
             resultat = self.jouer_une_partie()
             print(f"Résultat final : {'Blancs gagnent' if resultat == 1 else 'Noirs gagnent' if resultat == -1 else 'Égalité'}")
             
-            # Ajouter de l'auto-apprentissage pour améliorer l'IA
+            #l'auto-apprentissage pour améliorer l'IA
             self.self_play(5)  # Par exemple, jouer 5 parties en auto-apprentissage
 
 if __name__ == "__main__":

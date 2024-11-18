@@ -62,7 +62,7 @@ class Partie:
         if self.board.is_game_over():
             return None
 
-        move, _, _ = mcts_search(self.board, self.model)  # Obtenir le meilleur coup avec MCTS
+        move, _, _, _ = mcts_search(self.board, self.model)  # Obtenir le meilleur coup avec MCTS
         self.board.push(move)  # Appliquer le coup
 
         if self.display:
