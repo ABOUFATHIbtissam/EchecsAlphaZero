@@ -2,11 +2,13 @@ import random
 import chess
 import torch
 import math
+from Input import chessBoardAlphaZero
 from TransformTensor import board_to_tensor
 
 class MCTS:
-    def __init__(self, board, parent=None, prob=0.0):
+    def __init__(self, board, boardToTensor,parent=None, prob=0.0):
         self.board = board
+        self.boardToTensor = boardToTensor
         self.parent = parent
         self.children = []
         self.visits = 0 #nombre de fois que le noeud a été visité
@@ -32,7 +34,9 @@ class MCTS:
         for move, proba in zip(moves, policy_distribution):
             new_board = self.board.copy() 
             new_board.push(move)
-            self.children.append(MCTS(new_board, parent=self, prob=proba)) #ajouter le noeud fils
+            new_boardToTensor = self.boardToTensor.copy()
+            new_boardToTensor.update(new_board)
+            self.children.append(MCTS(new_board, new_boardToTensor,parent=self, prob=proba)) #ajouter le noeud fils
     
     def best_child(self, c=1.4):
         """Sélectionne le meilleur enfant en fonction de la valeur UCT"""
@@ -48,7 +52,7 @@ class MCTS:
 
 
 def mcts_search(board, model, simulations=50):
-    root = MCTS(board)
+    root = MCTS(board, chessBoardAlphaZero(board))
     simulation_count = 0
     if board.is_game_over():
         raise print("Recherche MCTS appelée sur un plateau terminé.")
@@ -63,7 +67,7 @@ def mcts_search(board, model, simulations=50):
         #Expansion
         if not node.board.is_game_over():
             #Evaluer la valeur du noeud
-            state_tensor = torch.tensor(board_to_tensor(node.board)).unsqueeze(0).permute(0, 3, 1, 2)
+            state_tensor = node.boardToTensor.to_tensor().unsqueeze(0).permute(0, 3, 1, 2)
             policy, value = model(state_tensor)
             
             #Convertir la politique en distribution de probabilité
@@ -72,7 +76,7 @@ def mcts_search(board, model, simulations=50):
             node.expand(policy_distribution)
         
         #Évaluation
-        state_tensor = torch.tensor(board_to_tensor(node.board)).unsqueeze(0).permute(0, 3, 1, 2)
+        state_tensor = node.boardToTensor.to_tensor().unsqueeze(0).permute(0, 3, 1, 2)
         _, value = model(state_tensor)
        
         #Remonter et propager la valeur du noeud

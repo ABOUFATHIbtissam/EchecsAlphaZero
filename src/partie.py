@@ -1,8 +1,6 @@
 import chess
 import pygame
 from MCTS import mcts_search
-from TransformTensor import board_to_tensor
-from DeepNN import DeepNN
 
 class Partie:
     def __init__(self, model, display=False):
