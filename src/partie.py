@@ -1,6 +1,7 @@
 import chess
 import pygame
 from MCTS import mcts_search
+from Input import chessBoardAlphaZero
 
 class Partie:
     def __init__(self, model, display=False):
@@ -10,6 +11,7 @@ class Partie:
         :param display: Activer ou désactiver l'affichage de la partie (optionnel, utile pour visualiser les jeux).
         """
         self.board = chess.Board()  # Créer un plateau d'échecs vide
+        self.boardToTensor = chessBoardAlphaZero(self.board)
         self.model = model
         self.display = display
         if display:
@@ -60,7 +62,7 @@ class Partie:
         if self.board.is_game_over():
             return None
 
-        move, _, _, _ = mcts_search(self.board, self.model)  # Obtenir le meilleur coup avec MCTS
+        move, _, _, _, _ = mcts_search(self.board, self.boardToTensor, self.model)  # Obtenir le meilleur coup avec MCTS
         self.board.push(move)  # Appliquer le coup
 
         if self.display:

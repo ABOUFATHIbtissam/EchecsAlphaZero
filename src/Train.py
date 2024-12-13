@@ -7,6 +7,7 @@ import random
 import json
 from MCTS import mcts_search
 from TransformTensor import board_to_tensor
+from Input import chessBoardAlphaZero
 
 #Self-Play qui joue des parties contre lui-même pour générer des données d'entraînement
 
@@ -22,22 +23,24 @@ class Train:
         """Fait jouer une partie complète à l'IA contre elle-même pour collecter des données."""
 
         board = chess.Board()
+        boardToTensor = chessBoardAlphaZero(board)
         game_data = []
         simulations_data = []
 
         while not board.is_game_over():
             # Exécute MCTS pour obtenir le meilleur coup et la distribution de probabilité des coups
-            move, policy_distribution, _, simulations = mcts_search(board, model)
+            move, best_move_tensor, policy_distribution, _, simulations = mcts_search(board, boardToTensor, model)
             print("game_data ", game_data)
             # Enregistrez les simulations ici
             simulations_data.append(simulations)
 
             # Stocker la position, la distribution de MCTS et le résultat temporaire (0)
             # `board_to_tensor` convertit la position du plateau en tenseur pour l'entraînement
-            game_data.append((board_to_tensor(board), policy_distribution, 0)) #etat jeu, distribution des proba des coups, resultat de la partie
+            game_data.append((boardToTensor.to_tensor(), policy_distribution, 0)) #etat jeu, distribution des proba des coups, resultat de la partie
             
             #Jouer le coup sur le plateau
             board.push(move)
+            boardToTensor = best_move_tensor.copy()
         
         # Mettre à jour les résultats finaux de la partie
         # Résultat de la partie (1 = victoire blanche, -1 = victoire noire, 0 = égalité)

@@ -51,8 +51,8 @@ class MCTS:
         return max(self.children, key=lambda node: node.visits)
 
 
-def mcts_search(board, model, simulations=50):
-    root = MCTS(board, chessBoardAlphaZero(board))
+def mcts_search(board, boardToTensor, model, simulations=50):
+    root = MCTS(board, boardToTensor)
     simulation_count = 0
     if board.is_game_over():
         raise print("Recherche MCTS appelée sur un plateau terminé.")
@@ -87,6 +87,7 @@ def mcts_search(board, model, simulations=50):
 
     # Retourner le meilleur coup basé sur la politique calculée
     best_move = root.best_child().board.peek()
+    best_move_tensor = root.best_child().boardToTensor
     
-    return best_move, policy_distribution, [child.visits for child in root.children], simulation_count
+    return best_move, best_move_tensor, policy_distribution, [child.visits for child in root.children], simulation_count
 
